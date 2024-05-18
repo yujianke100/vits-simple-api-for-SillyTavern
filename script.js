@@ -35,7 +35,7 @@
                 readQuotesOnly = !readQuotesOnly;
                 console.log('Read Quotes Only:', readQuotesOnly);
                 toggleSwitches.forEach(btn => {
-                    btn.innerText = readQuotesOnly ? 'Quotes' : 'Full Text';
+                    btn.innerText = readQuotesOnly ? 'Quotes' : 'All';
                     updateToggleButtonStyle(btn);
                 });
             };
