@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         vits-simple-api for SillyTavern
 // @namespace    https://github.com/yujianke100/vits-simple-api-for-SillyTavern
-// @version      1.0.1
+// @version      1.0.3
 // @license MIT
 // @description  Add a button to each chat message to play it using TTS API
 // @author       yujianke100
@@ -17,6 +17,7 @@
     let currentAudio = null;
     let readQuotesOnly = false;
     let toggleSwitches = [];
+    let apiDomain = localStorage.getItem('ttsApiDomain') || 'http://127.0.0.1:23456';
 
     // Function to add TTS/Stop button and a Toggle button to each chat message
     function addTTSButton(message) {
@@ -98,7 +99,7 @@
     // Function to send text to TTS API and play response
     function playTTS(text, ttsButton) {
         console.log('Sending text to TTS API:', text);
-        const apiUrl = `http://127.0.0.1:23456/voice/bert-vits2?text=${encodeURIComponent(text)}&id=0&noise=0.5&noisew=0.5`;
+        const apiUrl = `${apiDomain}/voice/bert-vits2?text=${encodeURIComponent(text)}&id=0&noise=0.5&noisew=0.5`;
 
         GM_xmlhttpRequest({
             method: 'GET',
@@ -123,6 +124,25 @@
         });
     }
 
+    // Function to add the settings button to the chat container
+    function addSettingsButton() {
+        const chatContainer = document.querySelector('#chat');
+        if (chatContainer && !chatContainer.querySelector('.settings-button')) {
+            const settingsButton = document.createElement('button');
+            settingsButton.innerText = 'TTS API Setting';
+            settingsButton.classList.add('settings-button', 'action-button');
+            settingsButton.addEventListener('click', () => {
+                const newDomain = prompt('Enter TTS API Domain:', apiDomain);
+                if (newDomain) {
+                    apiDomain = newDomain;
+                    localStorage.setItem('ttsApiDomain', apiDomain);
+                    console.log('API Domain updated to:', apiDomain);
+                }
+            });
+            chatContainer.appendChild(settingsButton);
+        }
+    }
+
     // Adding CSS styles for the buttons
     const style = document.createElement('style');
     style.innerHTML = `
@@ -140,16 +160,23 @@
         .mytts-button.playing {
             background-color: green;
         }
+
+        .settings-button {
+            margin-bottom: 10px;
+        }
     `;
     document.head.appendChild(style);
 
-    // Using MutationObserver to dynamically add buttons to new messages
+    // Using MutationObserver to dynamically add buttons to new messages and the settings button
     const observer = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
             if (mutation.addedNodes) {
                 mutation.addedNodes.forEach(node => {
                     if (node.classList && node.classList.contains('mes')) {
                         addTTSButton(node);
+                    }
+                    if (node.id === 'chat') {
+                        addSettingsButton();
                     }
                 });
             }
@@ -159,4 +186,7 @@
     // Start observing
     const config = { childList: true, subtree: true };
     observer.observe(document.body, config);
+
+    // Initial settings button addition
+    addSettingsButton();
 })();
