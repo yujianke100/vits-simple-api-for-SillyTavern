@@ -4,7 +4,7 @@
 // @version      1.0.0
 // @license MIT
 // @description  Add a button to each chat message to play it using TTS API
-// @author       shinshi
+// @author       yujianke100
 // @match        http://*:8080*
 // @match http://localhost:8080/*
 // @grant        GM_xmlhttpRequest
