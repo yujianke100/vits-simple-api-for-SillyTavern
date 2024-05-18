@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         vits-simple-api for SillyTavern
 // @namespace    https://github.com/yujianke100/vits-simple-api-for-SillyTavern
-// @version      1.0.0
+// @version      1.0.1
 // @license MIT
 // @description  Add a button to each chat message to play it using TTS API
 // @author       yujianke100
 // @match        http://*:8080*
 // @match http://localhost:8080/*
+// @match http://127.0.0.1:8080/*
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
@@ -17,19 +18,16 @@
     let readQuotesOnly = false;
     let toggleSwitches = [];
 
-    // Function to add TTS, Stop buttons, and a Toggle button to each chat message
+    // Function to add TTS/Stop button and a Toggle button to each chat message
     function addTTSButton(message) {
         if (!message.querySelector('.mytts-button')) {
             const ttsButton = document.createElement('button');
             ttsButton.innerText = 'TTS';
             ttsButton.classList.add('mytts-button', 'action-button');
-
-            const stopButton = document.createElement('button');
-            stopButton.innerText = 'Stop';
-            stopButton.classList.add('stop-button', 'action-button');
+            updateTTSButtonStyle(ttsButton, false);
 
             const toggleButton = document.createElement('button');
-            toggleButton.innerText = readQuotesOnly ? 'Quotes' : 'Full Text';
+            toggleButton.innerText = readQuotesOnly ? 'Quotes' : 'All';
             toggleButton.classList.add('toggle-button', 'action-button');
             updateToggleButtonStyle(toggleButton);
 
@@ -47,22 +45,20 @@
             toggleSwitches.push(toggleButton);
 
             ttsButton.addEventListener('click', () => {
-                console.log('TTS button clicked');
-                let messageText = message.querySelector('.mes_text').innerText;
-                if (readQuotesOnly) {
-                    const quotes = messageText.match(/“([^”]*)”/g);
-                    messageText = quotes ? quotes.map(quote => quote.replace(/“|”/g, '')).join(' ') : '';
-                }
-                console.log('TTS for:', messageText);
-                playTTS(messageText, ttsButton);
-            });
-
-            stopButton.addEventListener('click', () => {
-                if (currentAudio) {
+                if (currentAudio && !currentAudio.paused) {
                     currentAudio.pause();
                     currentAudio.currentTime = 0;
                     console.log('Audio stopped');
-                    updateTTSButtonStyle(null);
+                    updateTTSButtonStyle(ttsButton, false);
+                } else {
+                    console.log('TTS button clicked');
+                    let messageText = message.querySelector('.mes_text').innerText;
+                    if (readQuotesOnly) {
+                        const quotes = messageText.match(/“([^”]*)”/g);
+                        messageText = quotes ? quotes.map(quote => quote.replace(/“|”/g, '')).join(' ') : '';
+                    }
+                    console.log('TTS for:', messageText);
+                    playTTS(messageText, ttsButton);
                 }
             });
 
@@ -70,8 +66,7 @@
             if (buttonsContainer) {
                 buttonsContainer.appendChild(toggleButton);
                 buttonsContainer.appendChild(ttsButton);
-                buttonsContainer.appendChild(stopButton);
-                console.log('TTS, Stop buttons, and Toggle button added');
+                console.log('TTS/Stop button and Toggle button added');
             }
         }
     }
@@ -88,11 +83,16 @@
     }
 
     // Function to update the TTS button style
-    function updateTTSButtonStyle(button) {
-        document.querySelectorAll('.mytts-button').forEach(btn => {
-            btn.style.backgroundColor = btn === button ? 'green' : '';
-            btn.style.color = btn === button ? 'white' : '';
-        });
+    function updateTTSButtonStyle(button, isPlaying) {
+        if (isPlaying) {
+            button.innerText = 'Stop';
+            button.style.backgroundColor = 'green';
+            button.style.color = 'white';
+        } else {
+            button.innerText = 'TTS';
+            button.style.backgroundColor = 'white';
+            button.style.color = 'black';
+        }
     }
 
     // Function to send text to TTS API and play response
@@ -113,9 +113,9 @@
                 }
                 currentAudio = new Audio(audioUrl);
                 currentAudio.play().catch(e => console.error('Audio play error:', e));
-                currentAudio.onplay = () => updateTTSButtonStyle(ttsButton);
-                currentAudio.onpause = () => updateTTSButtonStyle(null);
-                currentAudio.onended = () => updateTTSButtonStyle(null);
+                currentAudio.onplay = () => updateTTSButtonStyle(ttsButton, true);
+                currentAudio.onpause = () => updateTTSButtonStyle(ttsButton, false);
+                currentAudio.onended = () => updateTTSButtonStyle(ttsButton, false);
             },
             onerror: function(error) {
                 console.error('TTS API Error:', error);
@@ -130,8 +130,6 @@
             background-color: gray;
             color: white;
             border: none;
-            padding: 5px 10px;
-            margin: 2px;
             cursor: pointer;
         }
 
